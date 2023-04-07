@@ -15,6 +15,8 @@ namespace BioCrowdsTechDemo
 
     public class BoidManager : MonoBehaviour
     {
+        public Transform[] goal_objects;
+
         [SerializeField]
         public BioParameters parameters;
 
@@ -50,11 +52,8 @@ namespace BioCrowdsTechDemo
 
         public int parallelBatchCount = 16;
 
-        public float vMax = 25f;
-
         public Boid[] boids;
         public int active_boids;
-
 
         public Boid leader;
 
@@ -62,12 +61,13 @@ namespace BioCrowdsTechDemo
         void Start()
         {
 
+            grid_dimensions.set_cellsize(parameters.agent_LOS);
             var total_cells = grid_dimensions.cells.x * grid_dimensions.cells.y;
 
             step = new NativeArray<float2>(active_boids, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
             position = new NativeArray<float2>(active_boids, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
             goals = new NativeArray<int>(active_boids, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
-            goal_positions = new NativeArray<float2>(1, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            goal_positions = new NativeArray<float2>(3, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
 
 
             randoms = new NativeArray<Unity.Mathematics.Random>(JobsUtility.MaxJobThreadCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
@@ -82,23 +82,24 @@ namespace BioCrowdsTechDemo
             grid = new NativeMultiHashMap<int, int>(active_boids * 18, Allocator.Persistent);
             active_grid = new NativeHashSet<int>(total_cells, Allocator.Persistent);
 
-            grid_dimensions.set_cellsize(parameters.agent_LOS);
 
-            samples = new NativeMultiHashMap<int, float2>(total_cells * parameters.markers, Allocator.Persistent);
+            samples = new NativeMultiHashMap<int, float2>(active_boids * parameters.markers * 9, Allocator.Persistent);
 
             active_boids = boids.Length;
-
-
 
             // Initialize data structures.
             for (int i = 0; i < active_boids; i++)
             {
-                goals[i] = 0;
+                if (i < 192)
+                    goals[i] = 2;
+                if (i < 128)
+                    goals[i] = 1;
+                if (i < 64)
+                    goals[i] = 0;
+
                 var p = boids[i].transform.position;
                 position[i] = float2(p.x, p.z);
             }
-
-
         }
 
         // Clean up structures.
@@ -122,7 +123,7 @@ namespace BioCrowdsTechDemo
         // Update is called once per frame
         void Update()
         {
-            for (int i = 1; i < active_boids; i++)
+            for (int i = 0; i < active_boids; i++)
             {
                 var p = boids[i].rb.position;
                 boids[i].rb.position = new Vector3(position[i].x, p.y, position[i].y);
@@ -130,6 +131,15 @@ namespace BioCrowdsTechDemo
 
             var leader_p = leader.rb.position;
             goal_positions[0] = float2(leader_p.x, leader_p.z);
+            for (int i = 0; i < goal_objects.Length; i++)
+            {
+                var p = float2(0f, 0f);
+                var go = goal_objects[i].position;
+                p.x = go.x;
+                p.y = go.z;
+                goal_positions[i + 1] = p;
+
+            }
 
         }
 
@@ -137,7 +147,6 @@ namespace BioCrowdsTechDemo
         void FixedUpdate()
         {
             ScheduleMovement();
-
         }
 
 
@@ -269,8 +278,7 @@ namespace BioCrowdsTechDemo
                 for (int i = 0; i < parameters.markers; i++)
                 {
 
-                    //var marker = cell_corner + random.NextFloat2() * grid_dimensions.cell_size ;     
-                    var marker = cell_corner + float2(0.5f, 0.5f) * grid_dimensions.cell_size;
+                    var marker = cell_corner + random.NextFloat2() * grid_dimensions.cell_size ;
                     int closest = -1;
                     float distance = float.MaxValue;
 
@@ -278,15 +286,14 @@ namespace BioCrowdsTechDemo
                         do
                         {
                             var agent_dist = length(marker - positions[agent]);
-                            if (agent_dist < distance)
+                            if (agent_dist < distance && agent_dist < parameters.agent_LOS)
                             {
                                 distance = agent_dist;
                                 closest = agent;
                             }
                         } while (grid.TryGetNextValue(out agent, ref it));
-
-                    if (distance < parameters.agent_LOS)
-                        samples.Add(closest, marker);
+                    
+                    samples.Add(closest, marker);
                 }
 
                 randoms[_threadId] = random;
@@ -376,7 +383,7 @@ namespace BioCrowdsTechDemo
             }
         }
 
-
+            
 
     }
 }
