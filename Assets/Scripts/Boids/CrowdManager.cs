@@ -13,17 +13,23 @@ namespace BioCrowdsTechDemo
     using Unity.Collections.LowLevel.Unsafe;
     using Unity.Jobs.LowLevel.Unsafe;
 
-    public class BoidManager : MonoBehaviour
+    // TBD
+    public enum GoalMode
     {
+        POSITION,
+        GOAL_LIST
+    }
 
+    public class CrowdManager : MonoBehaviour
+    {
         /// <summary>
         /// Jank Stuff
         /// </summary>
-        public Transform[] goal_objects;
-        public Agent[] agents;
+        bool initialized = false; 
         public NativeHashSet<int> destroyed_agents;
-        public Material[] materials;
- 
+        public Transform[] goal_objects;
+        public float2[] spawn_points = new float2[2];
+
         /// <summary>
         /// Simulation Data Structures
         /// </summary>
@@ -31,15 +37,14 @@ namespace BioCrowdsTechDemo
         public BioParameters parameters;
 
         private NativeArray<float2> step;
-        private NativeArray<float2> position;
+        public NativeArray<float2> position;
 
         private NativeArray<Unity.Mathematics.Random> randoms;
 
         private NativeMultiHashMap<int, float2> samples;
 
         private NativeArray<float2> goal_positions;
-        private NativeArray<int> goals;
-
+        public NativeArray<int> goals;
 
         // grid of cell id -> neighboring boid ids.
         private NativeMultiHashMap<int, int> grid;
@@ -60,14 +65,11 @@ namespace BioCrowdsTechDemo
             int2(1, 1)};
         public NativeArray<int2> offset_array;
 
-
         /// <summary>
         /// Job Parameters
         /// </summary>
         public int parallelBatchCount = 16;
 
-
-        
         /// <summary>
         /// Simulation Parameters
         /// </summary>
@@ -75,8 +77,9 @@ namespace BioCrowdsTechDemo
         public int active_agents;
         public Agent leader;
 
+
         // Initialize data structures.
-        void Start()
+        public void Init()
         {
             // Set up the grid math according to agent line of sight.
             grid_dimensions.set_cellsize(parameters.agent_LOS);
@@ -87,17 +90,17 @@ namespace BioCrowdsTechDemo
             grid = new NativeMultiHashMap<int, int>(agent_capacity * 18, Allocator.Persistent);
             active_grid = new NativeHashSet<int>(total_cells, Allocator.Persistent);
 
-
             // Initialize the data structures.
             step = new NativeArray<float2>(agent_capacity, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
-            position = new NativeArray<float2>(agent_capacity, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            //position = new NativeArray<float2>(agent_capacity, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            position = new NativeArray<float2>(agent_capacity, Allocator.Persistent);
             goals = new NativeArray<int>(agent_capacity, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
             samples = new NativeMultiHashMap<int, float2>(agent_capacity * parameters.markers * 9, Allocator.Persistent);
-            
 
-            //Hard coded 3 goals.
+            destroyed_agents = new NativeHashSet<int>(agent_capacity, Allocator.Persistent);
+
+            //TODO Hard coded 3 goals.
             goal_positions = new NativeArray<float2>(3, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
-
 
             // Initialize one random per job thread.
             randoms = new NativeArray<Unity.Mathematics.Random>(JobsUtility.MaxJobThreadCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
@@ -108,22 +111,22 @@ namespace BioCrowdsTechDemo
             }
 
 
+            /// Jank stuff
+            leader.Init();
 
-            // Fill Agents from units in the scene.
-            // Sorta jank.
-            for (int i = 0; i < active_agents; i++)
+            for (int i = 0; i < goal_objects.Length; i++)
             {
-                var agent_color = agents[i].color;
-                if (agent_color == AgentColor.RED)
-                    goals[i] = 2;
-                if (agent_color == AgentColor.BLUE)
-                    goals[i] = 1;
-                if (agent_color == AgentColor.WHITE)
-                    goals[i] = 0;
-
-                var p = agents[i].transform.position;
-                position[i] = float2(p.x, p.z);
+                var p = float2(0f, 0f);
+                var go = goal_objects[i].position;
+                p.x = go.x;
+                p.y = go.z;
+                var further = normalize(p) * 10.0f;
+                spawn_points[i] = p + further;
             }
+            ///
+
+            initialized = true; 
+
         }
 
         // Clean up structures.
@@ -131,7 +134,7 @@ namespace BioCrowdsTechDemo
         {
             step.Dispose();
             position.Dispose();
-            
+
             randoms.Dispose();
 
             samples.Dispose();
@@ -142,16 +145,15 @@ namespace BioCrowdsTechDemo
             grid.Dispose();
             active_grid.Dispose();
             offset_array.Dispose();
+
+            destroyed_agents.Dispose();
         }
 
         // Update is called once per frame
-        void Update()
+        public void UpdateStep()
         {
-            for (int i = 0; i < active_agents; i++)
-            {
-                var p = agents[i].rb.position;
-                agents[i].rb.position = new Vector3(position[i].x, p.y, position[i].y);
-            }
+            if (!initialized)
+                return;
 
             var leader_p = leader.rb.position;
             goal_positions[0] = float2(leader_p.x, leader_p.z);
@@ -159,31 +161,15 @@ namespace BioCrowdsTechDemo
             {
                 var p = float2(0f, 0f);
                 var go = goal_objects[i].position;
-                p.x = go.x;
+                p.x = go.x ;
                 p.y = go.z;
                 goal_positions[i + 1] = p;
-
-            }
-
-            if (active_agents < agent_capacity)
-            {
-                for (int i = 0; i < 10; i++)
-                {
-                    if (active_agents >= agent_capacity)
-                        break;
-
-                    var rand = UnityEngine.Random.Range(1, 3);
-                    if (rand == 1)
-                        AddAgent(goal_positions[1], AgentColor.RED);
-                    else
-                        AddAgent(goal_positions[2], AgentColor.BLUE);
-                }
             }
 
         }
 
         // Update is called once per frame
-        void FixedUpdate()
+        public void SimulationStep()
         {
             ScheduleMovement();
         }
@@ -244,6 +230,27 @@ namespace BioCrowdsTechDemo
             positionHandle.Complete();
 
             cell_keys.Dispose();
+
+            //var markagentsJob = new MarkAgentsForDestruction
+            //{
+            //    destroyed_agents = destroyed_agents.AsParallelWriter(),
+            //    goals = goals,
+            //    position = position,
+            //    goal_positions = goal_positions
+            //};
+
+            //var markAgentsHandle = markagentsJob.Schedule(active_agents, parallelBatchCount);
+            //markAgentsHandle.Complete();
+            //if (destroyed_agents.Count() > 0)
+            //{
+            //    var it = destroyed_agents.GetEnumerator();
+            //    do
+            //    {
+            //        RemoveAgent(it.Current);
+            //    } while (it.MoveNext());
+
+            //    destroyed_agents.Clear();
+            //}
         }
 
         [BurstCompile]
@@ -317,7 +324,7 @@ namespace BioCrowdsTechDemo
                 for (int i = 0; i < parameters.markers; i++)
                 {
 
-                    var marker = cell_corner + random.NextFloat2() * grid_dimensions.cell_size ;
+                    var marker = cell_corner + random.NextFloat2() * grid_dimensions.cell_size;
                     int closest = -1;
                     float distance = float.MaxValue;
 
@@ -331,7 +338,7 @@ namespace BioCrowdsTechDemo
                                 closest = agent;
                             }
                         } while (grid.TryGetNextValue(out agent, ref it));
-                    
+
                     samples.Add(closest, marker);
                 }
 
@@ -429,75 +436,54 @@ namespace BioCrowdsTechDemo
             public NativeArray<float2> position;
             [ReadOnly]
             public NativeArray<int> goals;
+            [ReadOnly]
+            public NativeArray<float2> goal_positions;
 
             [WriteOnly]
             public NativeHashSet<int>.ParallelWriter destroyed_agents;
 
-
-
             public void Execute(int index)
             {
-                var goal = goals[index];
+                var goal_id = goals[index];
+                var goal = goal_positions[goal_id];
                 var pos = position[index];
-                if (goal == 0)
+
+                if (goal_id == 0)
                     return;
 
-
-                if(goal == 1)
-                    if(pos.x < -70.0f)
-                    {
-                        destroyed_agents.Add(index);
-                        return;
-                    }
-                
-                if (goal == 2)
-                    if (pos.x > 75.0f)
-                        destroyed_agents.Add(index);
+                if (length(pos - goal) < 3.0f)
+                    destroyed_agents.Add(index);
             }
         }
 
 
-        public void AddAgent(float2 agent_position, AgentColor color)
+        public void AddAgent(float2 agent_position, int type)
         {
             if (active_agents >= agent_capacity)
                 return;
 
             position[active_agents] = agent_position;
             var t = new Vector3(agent_position.x, 1.0f, agent_position.y);
-            agents[active_agents].transform.position = t;
-            agents[active_agents].gameObject.SetActive(true);
-            agents[active_agents].color = color;
 
-
-            if (color == AgentColor.RED)
-            {
-                agents[active_agents].GetComponentInChildren<MeshRenderer>().material = materials[2];
-                goals[active_agents] = 2;
-
-            }
-            if (color == AgentColor.BLUE)
-            {
-                agents[active_agents].GetComponentInChildren<MeshRenderer>().material = materials[1];
-                goals[active_agents] = 1;
-            }
-            if (color == AgentColor.WHITE)
-            {
-                agents[active_agents].GetComponentInChildren<MeshRenderer>().material = materials[0];
-                goals[active_agents] = 0;
-            }
+            goals[active_agents] = type;
 
             active_agents++;
         }
 
         public void RemoveAgent(int id)
         {
-            agents[id].gameObject.SetActive(false);
-
-            position[id] = position[active_agents -1];
+            position[id] = position[active_agents - 1];
             goals[id] = goals[active_agents - 1];
-
             active_agents--;
         }
+        public int AddGoal(float2 position)
+        {
+            return 0;
+        }
 
+        public void UpdateGoal(int id)
+        {
+
+        }
     }
 }

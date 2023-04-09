@@ -19,11 +19,12 @@ namespace BioCrowdsTechDemo
     [RequireComponent(typeof(Rigidbody))]
     public class Agent : MonoBehaviour
     {
+        [SerializeField]
         public Rigidbody rb { get; private set; }
         public AgentColor color = AgentColor.WHITE;
 
         // Start is called before the first frame update
-        protected void Start()
+        public void Init()
         {
             rb = GetComponent<Rigidbody>();
 
