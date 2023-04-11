@@ -22,10 +22,12 @@ namespace BioCrowdsTechDemo
         [SerializeField]
         public Rigidbody rb { get; private set; }
         public AgentColor color = AgentColor.WHITE;
+        public Renderer renderer;
 
         // Start is called before the first frame update
         public void Init()
         {
+            renderer = GetComponentInChildren<Renderer>();
             rb = GetComponent<Rigidbody>();
 
         }

@@ -14,27 +14,22 @@ namespace BioCrowdsTechDemo
     using Unity.Jobs.LowLevel.Unsafe;
 
     // TBD
-    public enum GoalMode
-    {
-        POSITION,
-        GOAL_LIST
-    }
+    //public enum GoalMode
+    //{
+    //    POSITION,
+    //    GOAL_LIST
+    //}
 
     public class CrowdManager : MonoBehaviour
     {
         /// <summary>
         /// Jank Stuff
         /// </summary>
-        bool initialized = false; 
         public NativeHashSet<int> destroyed_agents;
-        public Transform[] goal_objects;
-        public float2[] spawn_points = new float2[2];
 
         /// <summary>
         /// Simulation Data Structures
         /// </summary>
-        [SerializeField]
-        public BioParameters parameters;
 
         private NativeArray<float2> step;
         public NativeArray<float2> position;
@@ -51,18 +46,9 @@ namespace BioCrowdsTechDemo
         private NativeHashSet<int> active_grid;
 
         public GridDimensions grid_dimensions;
-        public int2[] neigh_offset = {
-            int2(-1, -1),
-            int2(-1, 0),
-            int2(-1, 1),
-
-            int2(0, -1),
-            int2(0, 0),
-            int2(0, 1),
-
-            int2(1, -1),
-            int2(1, 0),
-            int2(1, 1)};
+        public int2[] neigh_offset = { int2(-1, -1), int2(-1, 0), int2(-1, 1),
+            int2(0, -1), int2(0, 0), int2(0, 1),
+            int2(1, -1), int2(1, 0), int2(1, 1)};
         public NativeArray<int2> offset_array;
 
         /// <summary>
@@ -71,11 +57,15 @@ namespace BioCrowdsTechDemo
         public int parallelBatchCount = 16;
 
         /// <summary>
-        /// Simulation Parameters
+        /// Quantity parameters
         /// </summary>
         public int agent_capacity = 400;
-        public int active_agents;
-        public Agent leader;
+        public int goal_capacity = 5;
+        public int active_goals = 0;
+        public int active_agents = 0;
+
+        [SerializeField]
+        public BioParameters parameters;
 
 
         // Initialize data structures.
@@ -90,17 +80,14 @@ namespace BioCrowdsTechDemo
             grid = new NativeMultiHashMap<int, int>(agent_capacity * 18, Allocator.Persistent);
             active_grid = new NativeHashSet<int>(total_cells, Allocator.Persistent);
 
-            // Initialize the data structures.
+            // Initialize agent  data structures.
             step = new NativeArray<float2>(agent_capacity, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
-            //position = new NativeArray<float2>(agent_capacity, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
-            position = new NativeArray<float2>(agent_capacity, Allocator.Persistent);
+            position = new NativeArray<float2>(agent_capacity, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
             goals = new NativeArray<int>(agent_capacity, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
             samples = new NativeMultiHashMap<int, float2>(agent_capacity * parameters.markers * 9, Allocator.Persistent);
 
-            destroyed_agents = new NativeHashSet<int>(agent_capacity, Allocator.Persistent);
-
-            //TODO Hard coded 3 goals.
-            goal_positions = new NativeArray<float2>(3, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            // initialize goal position arrays
+            goal_positions = new NativeArray<float2>(goal_capacity, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
 
             // Initialize one random per job thread.
             randoms = new NativeArray<Unity.Mathematics.Random>(JobsUtility.MaxJobThreadCount, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
@@ -110,22 +97,9 @@ namespace BioCrowdsTechDemo
                 randoms[i] = new Unity.Mathematics.Random(r);
             }
 
+            
+            destroyed_agents = new NativeHashSet<int>(agent_capacity, Allocator.Persistent);
 
-            /// Jank stuff
-            leader.Init();
-
-            for (int i = 0; i < goal_objects.Length; i++)
-            {
-                var p = float2(0f, 0f);
-                var go = goal_objects[i].position;
-                p.x = go.x;
-                p.y = go.z;
-                var further = normalize(p) * 10.0f;
-                spawn_points[i] = p + further;
-            }
-            ///
-
-            initialized = true; 
 
         }
 
@@ -150,32 +124,19 @@ namespace BioCrowdsTechDemo
         }
 
         // Update is called once per frame
-        public void UpdateStep()
-        {
-            if (!initialized)
-                return;
+        //public void UpdateStep()
+        //{
 
-            var leader_p = leader.rb.position;
-            goal_positions[0] = float2(leader_p.x, leader_p.z);
-            for (int i = 0; i < goal_objects.Length; i++)
-            {
-                var p = float2(0f, 0f);
-                var go = goal_objects[i].position;
-                p.x = go.x ;
-                p.y = go.z;
-                goal_positions[i + 1] = p;
-            }
-
-        }
+        //}
 
         // Update is called once per frame
-        public void SimulationStep()
+        public void SimulationStep(float deltaTime)
         {
-            ScheduleMovement();
+            ScheduleMovement(deltaTime);
         }
 
 
-        void ScheduleMovement()
+        void ScheduleMovement(float deltaTime)
         {
 
             var neighboursJob = new FillNeighboursJob
@@ -200,7 +161,7 @@ namespace BioCrowdsTechDemo
 
             var positionJob = new UpdatePositionJob
             {
-                deltaTime = Time.deltaTime,
+                deltaTime = deltaTime,
                 parameters = parameters,
                 position = position,
                 step = step
@@ -476,14 +437,21 @@ namespace BioCrowdsTechDemo
             goals[id] = goals[active_agents - 1];
             active_agents--;
         }
+        public void SetGoal(float2 position, int goal_index)
+        {
+            goal_positions[goal_index] = position;
+        }
+
         public int AddGoal(float2 position)
         {
-            return 0;
+            if (goal_capacity == active_goals)
+                return -1;
+
+            goal_positions[active_goals] = position;
+
+            active_goals++;
+            return active_goals - 1;
         }
 
-        public void UpdateGoal(int id)
-        {
-
-        }
     }
 }

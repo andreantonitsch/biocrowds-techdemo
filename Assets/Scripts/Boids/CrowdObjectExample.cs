@@ -31,14 +31,17 @@ namespace BioCrowdsTechDemo
         public GroupData[] group_data;
         public Region[] regions;
 
+        public Agent mouse_goal;
+
         // Start is called before the first frame update
         void Start()
         {
             manager.Init();
             renderer.Init();
-
+            mouse_goal.Init();
             for (int i = 0; i < group_data.Length; i++)
             {
+                manager.AddGoal(regions[i].origin);
                 AddAgentsToRegion(group_data[i]);
             }
 
@@ -47,25 +50,33 @@ namespace BioCrowdsTechDemo
         // Update is called once per frame
         void Update()
         {
-            manager.UpdateStep();
+
+            // Set goal 0 to mouse pointer
+            var p = mouse_goal.rb.position;
+            manager.SetGoal(float2(p.x, p.z), 0);
+            manager.SimulationStep(Time.deltaTime);
+
+
             renderer.UpdateStep();
         }
 
-        void FixedUpdate()
-        {
-            //manager.SimulationStep();
-        }
+        //void FixedUpdate()
+        //{
+        //    manager.SimulationStep(Time.fixedDeltaTime);
+        //}
 
         private void AddAgentsToRegion(GroupData data)
         {
+            
             for (int i = 0; i < data.quantity; i++)
             {
                 float2 p = float2(0.0f, 0.0f);
                 Rect region = regions[data.region].area;
                 p.x = UnityEngine.Random.Range(region.xMin, region.xMax);
                 p.y = UnityEngine.Random.Range(region.yMin, region.yMax);
-
-                manager.AddAgent(p + regions[data.region].origin, data.type);
+                var pos = p + regions[data.region].origin;
+                
+                manager.AddAgent(pos, data.type);
             }
         }
 

@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+using static Unity.Mathematics.math;
 
 namespace BioCrowdsTechDemo
 {
@@ -29,28 +30,41 @@ namespace BioCrowdsTechDemo
         // Update is called once per frame
         public void UpdateStep()
         {
+            // agents that are wrong enabled.
+            var agent_delta = max(0, manager.active_agents - currentAgents);
+            currentAgents = manager.active_agents;
+
+            //agent position and goal arrays
             var position = manager.position;
             var goal = manager.goals;
+
             for (int i = 0; i < manager.active_agents; i++)
             {
                 var p = agents[i].rb.position;
                 agents[i].rb.position = new Vector3(position[i].x, p.y, position[i].y);
+                if(!agents[i].isActiveAndEnabled)
+                    agents[i].gameObject.SetActive(true);
                 SetAgentColor(agents[i], goal[i]);
+            }
+
+            for (int i = 0; i < agent_delta; i++)
+            {
+                agents[i + currentAgents].gameObject.SetActive(false);
             }
         }
 
         void SetAgentColor(Agent agent, int type)
         {
             if (type == 0 & agent.color != AgentColor.WHITE) {
-                var renderer = agent.GetComponentInChildren<Renderer>().material = materials[0];
+                agent.renderer.material = materials[0];
                 agent.color = AgentColor.WHITE;
             }
             else if(type == 1 & agent.color != AgentColor.BLUE) {
-                var renderer = agent.GetComponentInChildren<Renderer>().material = materials[1];
+                agent.renderer.material = materials[1]; 
                 agent.color = AgentColor.BLUE;
             }
             else if(type == 2 & agent.color != AgentColor.RED) {
-                var renderer = agent.GetComponentInChildren<Renderer>().material = materials[2];
+                agent.renderer.material = materials[2];
                 agent.color = AgentColor.RED;
 
             }
