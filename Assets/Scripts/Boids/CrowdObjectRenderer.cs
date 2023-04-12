@@ -47,10 +47,14 @@ namespace BioCrowdsTechDemo
                 SetAgentColor(agents[i], goal[i]);
             }
 
+
+            // Goes over agents which were added in the simulation this frame.
             for (int i = 0; i < agent_delta; i++)
             {
-                agents[i + currentAgents].gameObject.SetActive(false);
+                agents[currentAgents  - i  - 1 ].gameObject.SetActive(false);
             }
+
+
         }
 
         void SetAgentColor(Agent agent, int type)

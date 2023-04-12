@@ -54,7 +54,12 @@ namespace BioCrowdsTechDemo
             // Set goal 0 to mouse pointer
             var p = mouse_goal.rb.position;
             manager.SetGoal(float2(p.x, p.z), 0);
-            manager.SimulationStep(Time.deltaTime);
+
+            for (int i = 0; i < 10; i++)
+            {
+                manager.SimulationStep(Time.deltaTime);
+
+            }
 
 
             renderer.UpdateStep();

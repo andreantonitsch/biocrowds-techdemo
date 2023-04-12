@@ -72,7 +72,7 @@ namespace BioCrowdsTechDemo
         public void Init()
         {
             // Set up the grid math according to agent line of sight.
-            grid_dimensions.set_cellsize(parameters.agent_LOS);
+            grid_dimensions.set_cellsize(parameters.agent_LOS*2);
             var total_cells = grid_dimensions.cells.x * grid_dimensions.cells.y;
 
             // Initialize grid data structures.
@@ -81,10 +81,10 @@ namespace BioCrowdsTechDemo
             active_grid = new NativeHashSet<int>(total_cells, Allocator.Persistent);
 
             // Initialize agent  data structures.
-            step = new NativeArray<float2>(agent_capacity, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
-            position = new NativeArray<float2>(agent_capacity, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
-            goals = new NativeArray<int>(agent_capacity, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
-            samples = new NativeMultiHashMap<int, float2>(agent_capacity * parameters.markers * 9, Allocator.Persistent);
+            step =      new NativeArray<float2>(agent_capacity, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            position =  new NativeArray<float2>(agent_capacity, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            goals =     new NativeArray<int>(agent_capacity, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            samples =   new NativeMultiHashMap<int, float2>(agent_capacity * parameters.markers * 4, Allocator.Persistent);
 
             // initialize goal position arrays
             goal_positions = new NativeArray<float2>(goal_capacity, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
@@ -167,6 +167,7 @@ namespace BioCrowdsTechDemo
                 step = step
             };
 
+            // Sort of slow
             samples.Clear();
             grid.Clear();
             active_grid.Clear();
