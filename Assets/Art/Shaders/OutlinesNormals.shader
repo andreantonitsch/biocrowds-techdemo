@@ -1,3 +1,5 @@
+// https://forum.unity.com/threads/problem-with-a-simple-shader-its-being-ignored-by-depth-related-post-effects.748028/ 
+// Bleargh
 Shader "Unlit/NormalOutline"
 {
     Properties
@@ -72,8 +74,6 @@ Shader "Unlit/NormalOutline"
                     // sample the texture
                     float4 col = tex2D(_MainTex, i.uv);
 
-
-
                     float4 depth_tex = tex2D(_CameraDepthNormalsTexture, i.uv);
 
                     float depth_normal;
@@ -93,28 +93,11 @@ Shader "Unlit/NormalOutline"
                     float depth_dx = max(abs(D(i.uv, float2(1, 0)).w - depth), abs(D(i.uv, float2(-1, 0)).w - depth));
                     float depth_dy = max(abs(D(i.uv, float2(0, 1)).w - depth), abs(D(i.uv, float2(0, -1)).w - depth));
 
-                    //return float4(n_dotx, n_doty, 0, 0);
-
                     if (m < _T.x | max(depth_dx, depth_dy) > _CameraZoomT)
                         return _Color;
                     else
                         return col;
 
-                    //return float4(depth_dx, depth_dy, 0, 1);
-                    //float4 r = _SmoothStepRanges;
-
-
-
-
-                    //depth2 = min(depth2, 1000);
-                    //depth2 = depth2 * (depth2 != 1000) - 10;
-                    //float s = smoothstep(_T.x - _T.y, _T.x + _T.y, depth2);
-                    //float s2 = smoothstep(_T.x + _T.y, 10000, depth2);
-                    //float s3 = lerp(s, s2, depth2 > (_T.x + _T.y));
-                    ////return s3;
-                    ////float s2 = smoothstep(s, r.z, _T);
-                    ////float4 color = smoothstep()
-                    //return lerp(col, _Color, s3);
 
                 }
                 ENDCG

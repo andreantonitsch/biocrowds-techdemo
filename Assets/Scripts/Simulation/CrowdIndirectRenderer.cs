@@ -11,7 +11,7 @@ namespace BioCrowdsTechDemo
     {
 
         public CrowdManager manager;
-
+        public Camera drawCamera;
         public Material instance_material;
         public Mesh instance_mesh;
         public GameObject prefab;
@@ -89,12 +89,14 @@ namespace BioCrowdsTechDemo
             InitializeBuffers();
         }
 
-        // Update is called once per frame
         public void Render()
         {
             UpdateBuffers();
+
             // Render
-            Graphics.DrawMeshInstancedIndirect(instance_mesh, 0, instance_material, bounds, argsBuffer);
+            Graphics.DrawMeshInstancedIndirect(instance_mesh, 0, instance_material, bounds, argsBuffer,
+                                               camera: drawCamera,
+                                               castShadows:UnityEngine.Rendering.ShadowCastingMode.On);
         }
 
 
