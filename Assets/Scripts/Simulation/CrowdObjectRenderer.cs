@@ -44,7 +44,7 @@ namespace BioCrowdsTechDemo
                 agents[i].rb.position = new Vector3(position[i].x, p.y, position[i].y);
                 if(!agents[i].isActiveAndEnabled)
                     agents[i].gameObject.SetActive(true);
-                SetAgentColor(agents[i], goal[i]);
+                SetAgentColor(agents[i], (int)goal[i]);
             }
 
 

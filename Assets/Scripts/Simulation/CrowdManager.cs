@@ -25,7 +25,7 @@ namespace BioCrowdsTechDemo
         /// </summary>
 
         public NativeArray<float2> position;
-        public NativeArray<int> goals;
+        public NativeArray<uint> goals;
 
         private NativeArray<float2> step;
         private NativeMultiHashMap<int, float2> samples;
@@ -80,7 +80,7 @@ namespace BioCrowdsTechDemo
             // Initialize agent simulation data structures.
             step = new NativeArray<float2>(agent_capacity, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
             position = new NativeArray<float2>(agent_capacity, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
-            goals = new NativeArray<int>(agent_capacity, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
+            goals = new NativeArray<uint>(agent_capacity, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
             samples = new NativeMultiHashMap<int, float2>(agent_capacity * parameters.markers * 4, Allocator.Persistent);
 
             // initialize goal position arrays
@@ -306,7 +306,7 @@ namespace BioCrowdsTechDemo
             [ReadOnly]
             public NativeMultiHashMap<int, float2> samples;
             [ReadOnly]
-            public NativeArray<int> goals;
+            public NativeArray<uint> goals;
             [ReadOnly]
             public NativeArray<float2> goals_position;
             [ReadOnly]
@@ -319,7 +319,7 @@ namespace BioCrowdsTechDemo
 
                 var pos = positions[index];
                 var goal_id = goals[index];
-                var goal = goals_position[goal_id];
+                var goal = goals_position[(int)goal_id];
 
                 // Total marker weight
                 float wt = 0.0f;
@@ -415,7 +415,7 @@ namespace BioCrowdsTechDemo
             position[active_agents] = agent_position;
             var t = new Vector3(agent_position.x, 1.0f, agent_position.y);
 
-            goals[active_agents] = type;
+            goals[active_agents] = (uint)type;
 
             active_agents++;
         }

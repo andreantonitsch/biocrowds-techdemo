@@ -6,7 +6,7 @@ Shader "Custom/InstancedSurfaceShader"
 		_Color("Color", Color) = (1, 1, 1, 1)
 		_CoreShadowWidth("CoreShadowWidth", Float) = 0.01
 		_Step("Step", Range(-0.8,0.8)) = 0.15
-		_MinStep("ShadowedValue", Range(0,0.5)) = 0.1
+		_MinStep("ShadowedValue", Range(0,2)) = 0.1
 		_MaxStep("IlluminatedValue", Range(0.5,1)) = 1.0
 
 		[HDR] _AmbientColor("AmbientColor", Color) = (0.5, 0.5, 0.5, 1)
@@ -61,10 +61,11 @@ Shader "Custom/InstancedSurfaceShader"
 			float _RimFuzziness;
 			float _RimWidth;
 
-	#ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
-			StructuredBuffer<int> typeBuffer;
+
+#ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
+			StructuredBuffer<uint> typeBuffer;
 			StructuredBuffer<float2> positionBuffer;
-	#endif
+#endif
 
 			struct Input {
 				float2 uv_MainTex;
@@ -87,6 +88,15 @@ Shader "Custom/InstancedSurfaceShader"
 					unity_WorldToObject._14_24_34 *= -1;
 					unity_WorldToObject._11_22_33 = 1.0f / unity_WorldToObject._11_22_33;
 				#endif
+			}
+
+#define PHI 1.61803398875
+			// https://web.archive.org/web/20200207113336/http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl
+			fixed3 hsv2rgb(fixed3 c)
+			{
+				fixed4 K = fixed4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+				fixed3 p = abs(frac(c.xxx + K.xyz) * 6.0 - K.www);
+				return c.z * lerp(K.xxx, saturate(p - K.xxx), c.y);
 			}
 
 
@@ -123,12 +133,28 @@ Shader "Custom/InstancedSurfaceShader"
 
 				float rim_band = smoothstep(_RimLighting - _RimFuzziness, _RimLighting + _RimFuzziness, rim_intense);
 
-				fixed4 c = tex_sample * _Color * (_AmbientColor + directional_light + specular_shine + rim_band);
+				fixed4 color = _Color;
+
+				// TODO Kinda jank
+#ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
+				if(typeBuffer[unity_InstanceID] == 0)
+				{
+					color = fixed4(1.0, 1.0, 1.0, 1.0);
+				}
+				else
+				{
+					for (uint i = 0; i < typeBuffer[unity_InstanceID]; i++)
+					{
+						color.x = frac(frac(color.x + PHI) + PHI);
+					}
+					color.xyz = hsv2rgb(color.xyz);
+				}
+#endif
+
+				fixed4 c = tex_sample * color * (_AmbientColor + directional_light + specular_shine + rim_band);
 				c.a = 1.0;
 
 				o.Albedo = c.rgb;
-				o.Metallic = 0;
-				o.Smoothness = _Glossiness;
 				o.Alpha = c.a;
 				o.Normal = o.Normal + float3(0.0, 0.0, 0.0);
 			}
