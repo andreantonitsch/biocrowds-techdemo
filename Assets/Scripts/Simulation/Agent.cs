@@ -16,6 +16,10 @@ namespace BioCrowdsTechDemo
         RED
     }
 
+
+    /// <summary>
+    /// An Object helper for the GameObject based crowd renderer.
+    /// </summary>
     [RequireComponent(typeof(Rigidbody))]
     public class Agent : MonoBehaviour
     {

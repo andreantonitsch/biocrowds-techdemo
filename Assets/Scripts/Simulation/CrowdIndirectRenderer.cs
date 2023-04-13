@@ -14,7 +14,6 @@ namespace BioCrowdsTechDemo
         public Camera drawCamera;
         public Material instance_material;
         public Mesh instance_mesh;
-        public GameObject prefab;
         
 
         private ComputeBuffer positionBuffer;

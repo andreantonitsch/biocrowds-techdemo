@@ -21,7 +21,7 @@ namespace BioCrowdsTechDemo
         public float2 origin;
         public Rect area;
     }
-    public class CrowdObjectExample : MonoBehaviour
+    public class CrowdExample : MonoBehaviour
     {
 
         public CrowdManager manager;
@@ -34,9 +34,12 @@ namespace BioCrowdsTechDemo
 
         public Agent mouse_goal;
 
+        public int AgentCapacity;
+
         // Start is called before the first frame update
         void Start()
         {
+            manager.agent_capacity = AgentCapacity;
             manager.Init();
 
             renderer = rendererObject.GetComponent<ICrowdRenderer>();

@@ -5,6 +5,12 @@ using UnityEngine;
 namespace BioCrowdsTechDemo
 {
 
+
+    /// <summary>
+    /// BioCrowds parameters
+    /// 
+    ///
+    /// </summary>
     [System.Serializable]
     public struct BioParameters
     {

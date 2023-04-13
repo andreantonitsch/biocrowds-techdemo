@@ -6,6 +6,9 @@ using Unity.Burst;
 
 namespace BioCrowdsTechDemo
 {
+    /// <summary>
+    /// Static Class for BioCrowds agent helper functions.
+    /// </summary>
     public static class AgentFunctions
     {
         // weight of a sample given a position and goal
