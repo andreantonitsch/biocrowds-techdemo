@@ -46,11 +46,9 @@ namespace BioCrowdsTechDemo
 
             renderer.Init();
             mouse_goal.Init();
-            for (int i = 0; i < group_data.Length; i++)
-            {
-                manager.AddGoal(regions[i].origin);
-                AddAgentsToRegion(group_data[i]);
-            }
+
+            AddGoals();
+            FillAgents();
 
         }
 
@@ -62,6 +60,7 @@ namespace BioCrowdsTechDemo
             var p = mouse_goal.rb.position;
             manager.SetGoal(float2(p.x, p.z), 0);
 
+            FillAgents();
 
             manager.SimulationStep(Time.deltaTime);
 
@@ -73,10 +72,27 @@ namespace BioCrowdsTechDemo
         //    manager.SimulationStep(Time.fixedDeltaTime);
         //}
 
-        private void AddAgentsToRegion(GroupData data)
+
+        private void AddGoals()
+        {
+            for (int i = 0; i < group_data.Length; i++)
+            {
+                manager.AddGoal(regions[i].origin);
+            }
+        }
+
+        private void FillAgents()
+        {
+            for (int i = 0; i < group_data.Length; i++)
+            {
+                AddAgentsToRegion(group_data[i], manager.agent_count_per_goal[group_data[i].type]);
+            }
+        }
+
+        private void AddAgentsToRegion(GroupData data, int current = 0)
         {
             
-            for (int i = 0; i < data.quantity; i++)
+            for (int i = 0; i < data.quantity - current; i++)
             {
                 float2 p = float2(0.0f, 0.0f);
                 Rect region = regions[data.region].area;

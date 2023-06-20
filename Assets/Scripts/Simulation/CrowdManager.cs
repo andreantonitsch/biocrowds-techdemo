@@ -27,9 +27,12 @@ namespace BioCrowdsTechDemo
         public NativeArray<float2> position;
         public NativeArray<uint> goals;
 
+        public List<int> agent_count_per_goal;
+
         private NativeArray<float2> step;
         private NativeMultiHashMap<int, float2> samples;
         private NativeArray<float2> goal_positions;
+
 
         // grid of cell id -> neighboring boid ids.
         private NativeMultiHashMap<int, int> grid;
@@ -40,6 +43,8 @@ namespace BioCrowdsTechDemo
             int2(0, -1), int2(0, 0), int2(0, 1),
             int2(1, -1), int2(1, 0), int2(1, 1)};
         public NativeArray<int2> offset_array;
+
+
 
         // Unity Jobs random Array
         private NativeArray<Unity.Mathematics.Random> randoms;
@@ -82,7 +87,6 @@ namespace BioCrowdsTechDemo
             position = new NativeArray<float2>(agent_capacity, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
             goals = new NativeArray<uint>(agent_capacity, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
             samples = new NativeMultiHashMap<int, float2>(agent_capacity * parameters.markers * 4, Allocator.Persistent);
-
             // initialize goal position arrays
             goal_positions = new NativeArray<float2>(goal_capacity, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
 
@@ -96,6 +100,7 @@ namespace BioCrowdsTechDemo
 
             destroyed_agents = new NativeHashSet<int>(agent_capacity, Allocator.Persistent);
 
+            agent_count_per_goal = new List<int>() ;
         }
 
         private void Dispose()
@@ -179,27 +184,32 @@ namespace BioCrowdsTechDemo
 
             cell_keys.Dispose();
 
-            //var markagentsJob = new MarkAgentsForDestruction
-            //{
-            //    destroyed_agents = destroyed_agents.AsParallelWriter(),
-            //    goals = goals,
-            //    position = position,
-            //    goal_positions = goal_positions
-            //};
+            var markagentsJob = new MarkAgentsForDestruction
+            {
+                destroyed_agents = destroyed_agents.AsParallelWriter(),
+                goals = goals,
+                position = position,
+                goal_positions = goal_positions
+            };
 
-            //var markAgentsHandle = markagentsJob.Schedule(active_agents, parallelBatchCount);
-            //markAgentsHandle.Complete();
-            //if (destroyed_agents.Count() > 0)
-            //{
-            //    var it = destroyed_agents.GetEnumerator();
-            //    do
-            //    {
-            //        RemoveAgent(it.Current);
-            //    } while (it.MoveNext());
+            var markAgentsHandle = markagentsJob.Schedule(active_agents, parallelBatchCount);
+            markAgentsHandle.Complete();
+            if (destroyed_agents.Count() > 0)
+            {
+                Debug.Log(destroyed_agents.Count());
+                List<int> agentsToRemove = new List<int>();
+                var it = destroyed_agents.GetEnumerator();
+                while (it.MoveNext())
+                {
+                    agentsToRemove.Add(it.Current);
+                } 
 
-            //    destroyed_agents.Clear();
-            //}
+                RemoveAgents(agentsToRemove);
+
+            }
+            destroyed_agents.Clear();
         }
+
 
         [BurstCompile]
         public struct FillNeighboursJob : IJobParallelFor
@@ -385,7 +395,7 @@ namespace BioCrowdsTechDemo
             [ReadOnly]
             public NativeArray<float2> position;
             [ReadOnly]
-            public NativeArray<int> goals;
+            public NativeArray<uint> goals;
             [ReadOnly]
             public NativeArray<float2> goal_positions;
 
@@ -395,13 +405,13 @@ namespace BioCrowdsTechDemo
             public void Execute(int index)
             {
                 var goal_id = goals[index];
-                var goal = goal_positions[goal_id];
+                var goal = goal_positions[(int)goal_id];
                 var pos = position[index];
 
                 if (goal_id == 0)
                     return;
 
-                if (length(pos - goal) < 3.0f)
+                if (length(pos - goal) < 10.0f)
                     destroyed_agents.Add(index);
             }
         }
@@ -412,6 +422,8 @@ namespace BioCrowdsTechDemo
             if (active_agents >= agent_capacity)
                 return;
 
+            agent_count_per_goal[type]++;
+
             position[active_agents] = agent_position;
             var t = new Vector3(agent_position.x, 1.0f, agent_position.y);
 
@@ -420,15 +432,27 @@ namespace BioCrowdsTechDemo
             active_agents++;
         }
 
-        // TODO Still not the perfect behavior if we want to remove N+ agents.
-        // I think it works if you remove them back-to-front
+        //Replace agent at index id with last agent in the list.
         public void RemoveAgent(int id)
         {
-            position[id] = position[active_agents - 1];
-            goals[id] = goals[active_agents - 1];
             active_agents--;
+            agent_count_per_goal[(int)goals[id]]--;
+
+            position[id] = position[active_agents];
+            goals[id] = goals[active_agents];
+
+
         }
 
+        public void RemoveAgents(List<int> agent_indexes)
+        {
+            agent_indexes.Sort();
+
+            for (int i = agent_indexes.Count-1; i >=0; i--)
+            {
+                RemoveAgent(agent_indexes[i]);
+            }
+        }
 
         public void SetGoal(float2 position, int goal_index)
         {
@@ -441,6 +465,8 @@ namespace BioCrowdsTechDemo
                 return -1;
 
             goal_positions[active_goals] = position;
+
+            agent_count_per_goal.Add(0);
 
             active_goals++;
             return active_goals - 1;
