@@ -48,7 +48,7 @@ namespace BioCrowdsTechDemo
 
         public void InitializeBounds()
         {
-            bounds = manager.grid_dimensions.AsBounds();
+            bounds = manager.gridDimensions.AsBounds();
         }
 
         void OnApplicationQuit()

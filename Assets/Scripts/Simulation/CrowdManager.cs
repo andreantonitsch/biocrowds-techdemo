@@ -20,10 +20,7 @@ namespace BioCrowdsTechDemo
         /// </summary>
         public NativeHashSet<int> destroyed_agents;
 
-        /// <summary>
-        /// Simulation Data Structures
-        /// </summary>
-
+        [Header("Simulation Data Structures")]
         public NativeArray<float2> position;
         public NativeArray<uint> goals;
 
@@ -38,11 +35,12 @@ namespace BioCrowdsTechDemo
         private NativeMultiHashMap<int, int> grid;
         private NativeHashSet<int> active_grid;
 
-        public GridDimensions grid_dimensions;
-        public int2[] neigh_offset = { int2(-1, -1), int2(-1, 0), int2(-1, 1),
+        [Header("Simulation Area")]
+        public GridDimensions gridDimensions;
+        private readonly int2[] neigh_offset = { int2(-1, -1), int2(-1, 0), int2(-1, 1),
             int2(0, -1), int2(0, 0), int2(0, 1),
             int2(1, -1), int2(1, 0), int2(1, 1)};
-        public NativeArray<int2> offset_array;
+        private NativeArray<int2> offset_array;
 
 
 
@@ -55,26 +53,33 @@ namespace BioCrowdsTechDemo
         /// <summary>
         /// Job Parameters
         /// </summary>
+        [Header("Simulation Job Parameters")]
         public int parallelBatchCount = 16;
 
         /// <summary>
         /// Quantity parameters
         /// </summary>
+        [Header("Simulation Quantities Parameters")]
         public int agent_capacity = 400;
         public int goal_capacity = 5;
         public int active_goals = 0;
         public int active_agents = 0;
 
+        [Header("BioCrowds Parameters")]
         [SerializeField]
         public BioParameters parameters;
 
 
-        // Initialize data structures.
+        /// <summary>
+        /// Initializes the Simulation.
+        /// Parameters must be set.
+        /// Initializes Data Structures.
+        /// </summary>
         public void Init()
         {
             // Set up the grid math according to agent line of sight.
-            grid_dimensions.set_cellsize(parameters.agent_LOS * 2);
-            var total_cells = grid_dimensions.cells.x * grid_dimensions.cells.y;
+            gridDimensions.set_cellsize(parameters.agent_LOS * 2);
+            var total_cells = gridDimensions.cells.x * gridDimensions.cells.y;
 
             // Initialize grid data structures.
             // Neighborhood cell offset array.
@@ -128,6 +133,10 @@ namespace BioCrowdsTechDemo
             Dispose();
         }
 
+        /// <summary>
+        /// Performs a Simulation step advancing deltaTime seconds.
+        /// </summary>
+        /// <param name="deltaTime">A delta of time to Simulate.</param>
         public void SimulationStep(float deltaTime)
         {
 
@@ -138,7 +147,7 @@ namespace BioCrowdsTechDemo
 
                 position = position,
                 offset = offset_array,
-                grid_dimensions = grid_dimensions
+                grid_dimensions = gridDimensions
             };
 
             var weightJob = new WeightAggregation
@@ -170,7 +179,7 @@ namespace BioCrowdsTechDemo
             {
                 active_cells = cell_keys,
                 grid = grid,
-                grid_dimensions = grid_dimensions,
+                grid_dimensions = gridDimensions,
                 parameters = parameters,
                 randoms = randoms,
                 positions = position,
@@ -212,7 +221,7 @@ namespace BioCrowdsTechDemo
 
 
         [BurstCompile]
-        public struct FillNeighboursJob : IJobParallelFor
+        private struct FillNeighboursJob : IJobParallelFor
         {
             [ReadOnly]
             public NativeArray<float2> position;
@@ -246,7 +255,7 @@ namespace BioCrowdsTechDemo
         /// Space sampling per cell.
         /// </summary>
         [BurstCompile]
-        public struct SpaceSamplingJob : IJobParallelFor
+        private struct SpaceSamplingJob : IJobParallelFor
         {
             // Random in Unity Jobs data.
             [NativeDisableContainerSafetyRestriction]
@@ -307,7 +316,7 @@ namespace BioCrowdsTechDemo
         /// Per agent sample aggregation
         /// </summary>
         [BurstCompile]
-        public struct WeightAggregation : IJobParallelFor
+        private struct WeightAggregation : IJobParallelFor
         {
             [WriteOnly]
             public NativeArray<float2> step;
@@ -368,7 +377,7 @@ namespace BioCrowdsTechDemo
 
 
         [BurstCompile]
-        public struct UpdatePositionJob : IJobParallelFor
+        private struct UpdatePositionJob : IJobParallelFor
         {
             [ReadOnly]
             public NativeArray<float2> step;
@@ -390,7 +399,7 @@ namespace BioCrowdsTechDemo
 
 
         [BurstCompile]
-        public struct MarkAgentsForDestruction : IJobParallelFor
+        private struct MarkAgentsForDestruction : IJobParallelFor
         {
             [ReadOnly]
             public NativeArray<float2> position;
@@ -417,22 +426,35 @@ namespace BioCrowdsTechDemo
         }
 
 
-        public void AddAgent(float2 agent_position, int type)
+        /// <summary>
+        /// Adds an Agent of Type Type at position agent_position.
+        /// An Agent 'Group' tracks and set goals for batches of agents.
+        /// </summary>
+        /// <param name="agent_position">The initial Agent position in world units.</param>
+        /// <param name="groupID">
+        /// A 'coloring' this agent.
+        /// Agents of the same 'Group' track the same goals and have the same Group ID.
+        /// </param>
+        public void AddAgent(float2 agent_position, int groupID)
         {
             if (active_agents >= agent_capacity)
                 return;
 
-            agent_count_per_goal[type]++;
+            agent_count_per_goal[groupID]++;
 
             position[active_agents] = agent_position;
             var t = new Vector3(agent_position.x, 1.0f, agent_position.y);
 
-            goals[active_agents] = (uint)type;
+            goals[active_agents] = (uint)groupID;
 
             active_agents++;
         }
 
-        //Replace agent at index id with last agent in the list.
+        /// <summary>
+        /// Removes Agent by step ID.
+        /// If you need to remove multiple Agents in the same Simulation Step use RemoveAgents instead.
+        /// </summary>
+        /// <param name="id">The ID of an Agent in the current Simulation Step.</param>
         public void RemoveAgent(int id)
         {
             active_agents--;
@@ -444,6 +466,12 @@ namespace BioCrowdsTechDemo
 
         }
 
+        /// <summary>
+        /// Removes all agents in agent_indexes from the simulation.
+        /// This method uses per Simulation Step indexing and does not guarantee an index acquired in a previous frame
+        /// will remove the agent that owned that index before.
+        /// </summary>
+        /// <param name="agent_indexes">A list of Agent indexes. Indexes must be current Simulation Step indexes.</param>
         public void RemoveAgents(List<int> agent_indexes)
         {
             agent_indexes.Sort();
@@ -454,11 +482,21 @@ namespace BioCrowdsTechDemo
             }
         }
 
-        public void SetGoal(float2 position, int goal_index)
+        /// <summary>
+        /// Sets the Goal for an Agent Group.
+        /// </summary>
+        /// <param name="position">The Goal new position.</param>
+        /// <param name="groupID">The Group ID of the Group.</param>
+        public void SetGoal(float2 position, int groupID)
         {
-            goal_positions[goal_index] = position;
+            goal_positions[groupID] = position;
         }
 
+        /// <summary>
+        /// Adds a new Goal (and new Agent Group) to the simulation.
+        /// </summary>
+        /// <param name="position">The new Goal position.</param>
+        /// <returns></returns>
         public int AddGoal(float2 position)
         {
             if (goal_capacity == active_goals)
