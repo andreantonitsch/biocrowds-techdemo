@@ -73,20 +73,27 @@ crowdManager.Simulate(Time.deltaTime);
 The package comes with an example scene and component that implements a simple siulation called `CrowdExample` .
 
 ### Simulation Configuration Details
-There is a relationship between the `Markers` setting, the quantity of space samples each cell of space will generate, and the `Agent_LoS(Line of Sight)` parameter, how far agents can look for available space and compete for it. If the `Agent_LoS` is too large in relation to a `Marker` quantity, the agent movement can be jerkier. I have not tested many different ratios, but between `32` and `64 markers/m²`   
+There is a relationship between the `Markers` setting, the quantity of space samples each cell of space will generate, and the `Agent Line of Sight` parameter, how far agents can look for available space and compete for it. If the `Agent_LoS` is too large in relation to a `Marker` quantity, the agent movement can be jerkier. I have not tested many different ratios, but between `32` and `64 markers/m²` results in smooth looking simulation.
 
+The `Movement Epsilon` parameter controls the minimum length a computed movement vector needs to move an agent. Use this to finetune your simulation when agents become shaky when in tight groups, close to their objectives or at low speeds.
 
+Currently `Agent Radius` is not implemented.
 
 ## Rendering
-    The package comes with two example Renderers for the simulation.
-    - The GPU instanced drawing CrowdIndirectRenderer
-        (This uses a base mesh and Graphics.DrawMeshInstancedIndirect to draw the meshes).
-    - The Unity Object based CrowdObjectRenderer
-        (This one just positions game objects according to the simulation.)
+The package comes with two example Renderers for the simulation.
+- The GPU instanced drawing `CrowdIndirectRenderer`
+        (This uses a base mesh and `Graphics.DrawMeshInstancedIndirect` to draw agent meshes).
+- The Unity `GameObject` based `CrowdObjectRenderer`
+        ( It represents crowds by positions `GameObjects` according to the simulation.)
 
-    The example scene shows both of those working solutions.
+The example scene `Debug_Scene` shows both of those working solutions.
 
-# Backlog
+- As a third option, if you have specific needs in mind. You can write your own _Crowd Renderer_. This can be easily done by directly accessing the `CrowdManager` Component simulation data.
+
+
+
+# Backlog of Features
     - Parallellize the space distribution job.
     - Create a customizeable agent behavior system. (e.g. a 'script'-language)
     - Change the agent step data structure to a NativeArray instead of a NativeMultiHashMap to improve cache coherency.
+    - Implement the Agent Radius feature.
