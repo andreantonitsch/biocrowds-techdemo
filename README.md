@@ -28,19 +28,54 @@ All that said, this package heavily uses Unity Native Collections, Parallell Job
 This package was tested in _Unity3D 2022.3.1f1(LTS)_ and requires:
 - Unity Burst (tested with 1.8.4)
 - Unity Collections (tested with 1.2.4)
+- Unity Jobs
 Then simply import the package.
  
+
+## CrowdManager Component
+A `CrowdManager` Component controls a BioCrowds simulation in a scene.
+Simulations are completely separate to each other.
+
+Simulation _hyperparameters_ control performace and simulation objects capacities, they are configured in sections `Simulation Job Parameters` and `Simulation Quantities Parameters`.
+
+All simulation parameters can be configured in the section `BioCrowds Parameters` in the Unity Inspector.
+
+// Insert image.
+
 ## Simulation
-You can initialize a simulation with the CrowdManager class.
+You can initialize a simulation with the CrowdManager Component.
+
+To run the simulation call the CrowdManager Component Methods.
+
 Example:
      
-```
-git status
-git add
-git commit
+```csharp
+public CrowdManager crowdManager;
+
+...
+
+crowdManager.Init();
+
+Vector3 position = Vector3.zero;
+int leftGoalIndex = 0;
+int rightGoalIndex = 1;
+
+crowdManager.AddAgent(position, leftGoalIndex);
+crowdManager.AddAgent(position, rightGoalIndex);
+
+...
+
+//Each call to Simulate computes one simulation step. Using a specific time delta.
+crowdManager.Simulate(Time.deltaTime);
+
 ```
 
-     The package comes with an example component.
+The package comes with an example scene and component that implements a simple siulation called `CrowdExample` .
+
+### Simulation Configuration Details
+There is a relationship between the `Markers` setting, the quantity of space samples each cell of space will generate, and the `Agent_LoS(Line of Sight)` parameter, how far agents can look for available space and compete for it. If the `Agent_LoS` is too large in relation to a `Marker` quantity, the agent movement can be jerkier. I have not tested many different ratios, but between `32` and `64 markers/m²`   
+
+
 
 ## Rendering
     The package comes with two example Renderers for the simulation.
@@ -50,9 +85,6 @@ git commit
         (This one just positions game objects according to the simulation.)
 
     The example scene shows both of those working solutions.
-
-# Implementation details
-
 
 # Backlog
     - Parallellize the space distribution job.
