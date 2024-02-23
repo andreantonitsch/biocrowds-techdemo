@@ -40,7 +40,8 @@ Simulation _hyperparameters_ control performace and simulation objects capacitie
 
 All simulation parameters can be configured in the section `BioCrowds Parameters` in the Unity Inspector.
 
-![CrowdManager Component](Images/CrowdManagerComponent.png | width=100)
+<img src="Images/CrowdManagerComponent.png" width="150">
+
 ## Simulation
 You can initialize a simulation with the CrowdManager Component.
 
