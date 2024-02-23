@@ -24,6 +24,7 @@ namespace BioCrowdsTechDemo
         public NativeArray<float2> position;
         public NativeArray<uint> goals;
 
+        [HideInInspector]
         public List<int> agent_count_per_goal;
 
         private NativeArray<float2> step;
@@ -36,6 +37,7 @@ namespace BioCrowdsTechDemo
         private NativeHashSet<int> active_grid;
 
         [Header("Simulation Area")]
+        [HideInInspector]
         public GridDimensions gridDimensions;
         private readonly int2[] neigh_offset = { int2(-1, -1), int2(-1, 0), int2(-1, 1),
             int2(0, -1), int2(0, 0), int2(0, 1),
