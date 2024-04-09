@@ -36,7 +36,7 @@ Then simply import the package.
 A `CrowdManager` Component controls a BioCrowds simulation in a scene.
 Simulations are completely separate to each other.
 
-Simulation _hyperparameters_ control performace and simulation objects capacities, they are configured in sections `Simulation Job Parameters` and `Simulation Quantities Parameters`.
+Simulation _meta parameters_ control performace and simulation objects capacities, they are configured in sections `Simulation Meta Parameters` and `Simulation Quantities Parameters`.
 
 All simulation parameters can be configured in the section `BioCrowds Parameters` in the Unity Inspector.
 
@@ -69,8 +69,20 @@ crowdManager.AddAgent(position, rightGoalIndex);
 crowdManager.Simulate(Time.deltaTime);
 
 ```
+### Simulation Features
 
-The package comes with an example scene and component that implements a simple siulation called `CrowdExample` .
+Lane formation
+<img src="Examples/4way.gif" width="350">
+<img src="Images/LaneFormation.png" width="350">
+
+4-Way Crossing
+<img src="Examples/lanes.gif" width="350">
+
+### Sample Examples
+The package comes with an example scenes and components that implements some examples:
+- `MouseControl` shows an example of using the mouse to control a crowd.
+- `LaneFormation` models crowds forming lanes when interacting with each other.
+- `4WayCrossing` shows the interaction of 4 crowds.
 
 ### Simulation Configuration Details
 There is a relationship between the `Markers` setting, the quantity of space samples each cell of space will generate, and the `Agent Line of Sight` parameter, how far agents can look for available space and compete for it. If the `Agent_LoS` is too large in relation to a `Marker` quantity, the agent movement can be jerkier. I have not tested many different ratios, but between `32` and `64 markers/m²` results in smooth looking simulation.
@@ -78,6 +90,9 @@ There is a relationship between the `Markers` setting, the quantity of space sam
 The `Movement Epsilon` parameter controls the minimum length a computed movement vector needs to move an agent. Use this to finetune your simulation when agents become shaky when in tight groups, close to their objectives or at low speeds.
 
 Currently `Agent Radius` is not implemented.
+
+
+
 
 ## Rendering
 The package comes with two example Renderers for the simulation.
