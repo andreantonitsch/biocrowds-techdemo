@@ -17,7 +17,6 @@ namespace BioCrowdsTechDemo
     public struct GridDimensions
     {
         // (width/height)
-
         public float2 origin;
         public float2 dimensions;
         public int2 cells;
@@ -31,7 +30,6 @@ namespace BioCrowdsTechDemo
             cells = int2(30, 30);
 
             cell_size = dimensions / cells;
-
         }
 
         /// <summary>
@@ -120,6 +118,14 @@ namespace BioCrowdsTechDemo
         public float2 cell_corner(int2 _cell)
         {
             return _cell * cell_size + origin;
+        }
+
+
+        public void set_bins_cellsize(float _cell_size, int bins)
+        {
+            cells = new int2(bins, bins);
+            cell_size = new float2(_cell_size, _cell_size);
+            dimensions = cells * cell_size;
         }
 
         /// <summary>

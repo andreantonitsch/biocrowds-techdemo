@@ -37,8 +37,9 @@ namespace BioCrowdsTechDemo
         private NativeHashSet<int> active_grid;
 
         [Header("Simulation Area")]
-        [HideInInspector]
-        public GridDimensions gridDimensions;
+        //[HideInInspector]
+        [SerializeField]
+        private GridDimensions gridDimensions;
         private readonly int2[] neigh_offset = { int2(-1, -1), int2(-1, 0), int2(-1, 1),
             int2(0, -1), int2(0, 0), int2(0, 1),
             int2(1, -1), int2(1, 0), int2(1, 1)};
@@ -55,8 +56,11 @@ namespace BioCrowdsTechDemo
         /// <summary>
         /// Job Parameters
         /// </summary>
-        [Header("Simulation Job Parameters")]
+        [Header("Simulation Meta Parameters")]
         public int parallelBatchCount = 16;
+        public int spaceDiscretizationBins = 100;
+        public int stepIterations = 1;
+
 
         /// <summary>
         /// Quantity parameters
@@ -69,7 +73,7 @@ namespace BioCrowdsTechDemo
 
         [Header("BioCrowds Parameters")]
         [SerializeField]
-        public BioParameters parameters;
+        private BioParameters parameters;
 
 
         /// <summary>
@@ -80,20 +84,26 @@ namespace BioCrowdsTechDemo
         public void Init()
         {
             // Set up the grid math according to agent line of sight.
-            gridDimensions.set_cellsize(parameters.agent_LOS * 2);
-            var total_cells = gridDimensions.cells.x * gridDimensions.cells.y;
+            //gridDimensions = new GridDimensions(new float2(100, 100));
+            //gridDimensions.set_cellsize(parameters.agent_LOS * 2);
+            gridDimensions.set_bins_cellsize(parameters.agent_LOS * 2, spaceDiscretizationBins);
+            //var total_cells = (gridDimensions.cells.x) * (gridDimensions.cells.y);
 
             // Initialize grid data structures.
             // Neighborhood cell offset array.
             offset_array = new NativeArray<int2>(neigh_offset, Allocator.Persistent);
-            grid = new NativeMultiHashMap<int, int>(agent_capacity * 18, Allocator.Persistent);
-            active_grid = new NativeHashSet<int>(total_cells, Allocator.Persistent);
+            grid = new NativeMultiHashMap<int, int>(agent_capacity * 9, Allocator.Persistent);
+
+            // I think the hashset removes duplicates after the job. when used as a Parallel Writer.
+            // So I think we have to add the maximum ossible value with duplicates
+            active_grid = new NativeHashSet<int>(agent_capacity * 9, Allocator.Persistent);
+            //active_grid = new NativeHashSet<int>(total_cells, Allocator.Persistent);
 
             // Initialize agent simulation data structures.
             step = new NativeArray<float2>(agent_capacity, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
             position = new NativeArray<float2>(agent_capacity, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
             goals = new NativeArray<uint>(agent_capacity, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
-            samples = new NativeMultiHashMap<int, float2>(agent_capacity * parameters.markers * 4, Allocator.Persistent);
+            samples = new NativeMultiHashMap<int, float2>(agent_capacity * parameters.markers * 2, Allocator.Persistent);
             // initialize goal position arrays
             goal_positions = new NativeArray<float2>(goal_capacity, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);
 
@@ -141,84 +151,88 @@ namespace BioCrowdsTechDemo
         /// <param name="deltaTime">A delta of time to Simulate.</param>
         public void SimulationStep(float deltaTime)
         {
-
-            var neighboursJob = new FillNeighboursJob
+            for (int i = 0; i < stepIterations; i++)
             {
-                grid = grid.AsParallelWriter(),
-                active_grid = active_grid.AsParallelWriter(),
+                deltaTime /= stepIterations;
 
-                position = position,
-                offset = offset_array,
-                grid_dimensions = gridDimensions
-            };
-
-            var weightJob = new WeightAggregation
-            {
-                goals = goals,
-                goals_position = goal_positions,
-                parameters = parameters,
-                positions = position,
-                samples = samples,
-                step = step
-            };
-
-            var positionJob = new UpdatePositionJob
-            {
-                deltaTime = deltaTime,
-                position = position,
-                step = step
-            };
-
-            // Sort of slow
-            samples.Clear();
-            grid.Clear();
-            active_grid.Clear();
-            var neighborFillHandle = neighboursJob.Schedule(active_agents, parallelBatchCount);
-            neighborFillHandle.Complete();
-
-            var cell_keys = active_grid.ToNativeArray(Allocator.TempJob);
-            var samplingJob = new SpaceSamplingJob
-            {
-                active_cells = cell_keys,
-                grid = grid,
-                grid_dimensions = gridDimensions,
-                parameters = parameters,
-                randoms = randoms,
-                positions = position,
-                samples = samples.AsParallelWriter()
-            };
-
-            var samplingHandle = samplingJob.Schedule(cell_keys.Length, parallelBatchCount, neighborFillHandle);
-            var weightHandle = weightJob.Schedule(active_agents, parallelBatchCount, samplingHandle);
-            var positionHandle = positionJob.Schedule(active_agents, parallelBatchCount, weightHandle);
-            positionHandle.Complete();
-
-            cell_keys.Dispose();
-
-            var markagentsJob = new MarkAgentsForDestruction
-            {
-                destroyed_agents = destroyed_agents.AsParallelWriter(),
-                goals = goals,
-                position = position,
-                goal_positions = goal_positions
-            };
-
-            var markAgentsHandle = markagentsJob.Schedule(active_agents, parallelBatchCount);
-            markAgentsHandle.Complete();
-            if (destroyed_agents.Count() > 0)
-            {
-                Debug.Log(destroyed_agents.Count());
-                List<int> agentsToRemove = new List<int>();
-                var it = destroyed_agents.GetEnumerator();
-                while (it.MoveNext())
+                var neighboursJob = new FillNeighboursJob
                 {
-                    agentsToRemove.Add(it.Current);
-                } 
+                    grid = grid.AsParallelWriter(),
+                    active_grid = active_grid.AsParallelWriter(),
 
-                RemoveAgents(agentsToRemove);
+                    position = position,
+                    offset = offset_array,
+                    grid_dimensions = gridDimensions
+                };
 
+                var weightJob = new WeightAggregation
+                {
+                    goals = goals,
+                    goals_position = goal_positions,
+                    parameters = parameters,
+                    positions = position,
+                    samples = samples,
+                    step = step
+                };
+
+                var positionJob = new UpdatePositionJob
+                {
+                    deltaTime = deltaTime,
+                    position = position,
+                    step = step
+                };
+
+                // Sort of slow
+                samples.Clear();
+                grid.Clear();
+                active_grid.Clear();
+                var neighborFillHandle = neighboursJob.Schedule(active_agents, parallelBatchCount);
+                neighborFillHandle.Complete();
+
+                var cell_keys = active_grid.ToNativeArray(Allocator.TempJob);
+                var samplingJob = new SpaceSamplingJob
+                {
+                    active_cells = cell_keys,
+                    grid = grid,
+                    grid_dimensions = gridDimensions,
+                    parameters = parameters,
+                    randoms = randoms,
+                    positions = position,
+                    samples = samples.AsParallelWriter()
+                };
+
+                var samplingHandle = samplingJob.Schedule(cell_keys.Length, parallelBatchCount, neighborFillHandle);
+                var weightHandle = weightJob.Schedule(active_agents, parallelBatchCount, samplingHandle);
+                var positionHandle = positionJob.Schedule(active_agents, parallelBatchCount, weightHandle);
+                positionHandle.Complete();
+
+                cell_keys.Dispose();
+
+                var markagentsJob = new MarkAgentsForDestruction
+                {
+                    destroyed_agents = destroyed_agents.AsParallelWriter(),
+                    goals = goals,
+                    position = position,
+                    goal_positions = goal_positions
+                };
+
+                var markAgentsHandle = markagentsJob.Schedule(active_agents, parallelBatchCount);
+                markAgentsHandle.Complete();
+                if (destroyed_agents.Count() > 0)
+                {
+                    //Debug.Log(destroyed_agents.Count());
+                    List<int> agentsToRemove = new List<int>();
+                    var it = destroyed_agents.GetEnumerator();
+                    while (it.MoveNext())
+                    {
+                        agentsToRemove.Add(it.Current);
+                    }
+
+                    RemoveAgents(agentsToRemove);
+
+                }
+                destroyed_agents.Clear();
             }
-            destroyed_agents.Clear();
         }
 
 
@@ -419,8 +433,8 @@ namespace BioCrowdsTechDemo
                 var goal = goal_positions[(int)goal_id];
                 var pos = position[index];
 
-                if (goal_id == 0)
-                    return;
+                //if (goal_id == 0)
+                //    return;
 
                 if (length(pos - goal) < 10.0f)
                     destroyed_agents.Add(index);
@@ -511,6 +525,12 @@ namespace BioCrowdsTechDemo
             active_goals++;
             return active_goals - 1;
         }
+
+        //public void SetDimensions(float2 widthHeight)
+        //{
+        //    gridDimensions = new GridDimensions(widthHeight);
+        //}
+
 
     }
 }

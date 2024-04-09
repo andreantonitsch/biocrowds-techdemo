@@ -23,8 +23,8 @@ namespace BioCrowdsTechDemo
         private uint[] args = new uint[5] { 0, 0, 0, 0, 0 };
 
 
-        private Bounds bounds;
-        public Bounds Bounds { get => bounds; set => bounds = value; }
+        public Bounds renderVolume;
+        public Bounds RenderVolume { get => renderVolume; set => renderVolume = value; }
 
         public void InitializeBuffers() 
         {
@@ -46,10 +46,10 @@ namespace BioCrowdsTechDemo
             typesBuffer.Release();
         }
 
-        public void InitializeBounds()
-        {
-            bounds = manager.gridDimensions.AsBounds();
-        }
+        //public void InitializeBounds()
+        //{
+        //    renderVolume = manager.DimensionBounds();
+        //}
 
         void OnApplicationQuit()
         {
@@ -84,7 +84,7 @@ namespace BioCrowdsTechDemo
 
         public void Init()
         {
-            InitializeBounds();
+            //InitializeBounds();
             InitializeBuffers();
         }
 
@@ -93,12 +93,17 @@ namespace BioCrowdsTechDemo
             UpdateBuffers();
 
             // Render
-            Graphics.DrawMeshInstancedIndirect(instance_mesh, 0, instance_material, bounds, argsBuffer,
+            Graphics.DrawMeshInstancedIndirect(instance_mesh, 0, instance_material, renderVolume, argsBuffer,
                                                camera: drawCamera,
                                                castShadows:UnityEngine.Rendering.ShadowCastingMode.On);
         }
 
 
+        private void OnDrawGizmosSelected()
+        {
+            Gizmos.color = Color.blue;
+            Gizmos.DrawWireCube(renderVolume.center, renderVolume.extents);
+        }
     }
 }
 
