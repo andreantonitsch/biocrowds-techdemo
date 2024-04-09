@@ -72,10 +72,12 @@ crowdManager.Simulate(Time.deltaTime);
 ### Simulation Features
 
 Lane formation
+
 <img src="Examples/4way.gif" width="350">
-<img src="Images/LaneFormation.png" width="350">
+<img src="Images/Laneformation.png" width="350">
 
 4-Way Crossing
+
 <img src="Examples/lanes.gif" width="350">
 
 ### Sample Examples
