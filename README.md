@@ -10,7 +10,7 @@ Two implementation issues that occurs from that idea, and the original algorithm
 - the discretized world data can become huge;
 - the distribution of space among the agents needs special care when parallellizing the algorithm.
 
-The original BioCrowds further partition space in a regular square grid, each cell containing some quantity of 'space markers'. These space markers are sample in the simulation initialization. This fixes the world size to a pre-defined region (where there are markers).
+The original BioCrowds[[1]](./README.md/#References) further partition space in a regular square grid, each cell containing some quantity of 'space markers'. These space markers are sample in the simulation initialization. This fixes the world size to a pre-defined region (where there are markers).
 
 In this implementation, I changed the algorithm slightly to favor the data oriented simulation flow.
 Instead of pre-sampling a partition of space, I compute the samples on the fly, during the simulation.
@@ -94,8 +94,6 @@ The `Movement Epsilon` parameter controls the minimum length a computed movement
 Currently `Agent Radius` is not implemented.
 
 
-
-
 ## Rendering
 The package comes with two example Renderers for the simulation.
 - The GPU instanced drawing `CrowdIndirectRenderer`
@@ -107,7 +105,9 @@ The example scene `Debug_Scene` shows both of those working solutions.
 
 - As a third option, if you have specific needs in mind. You can write your own _Crowd Renderer_. This can be easily done by directly accessing the `CrowdManager` Component simulation data.
 
+# References
 
+- [[1]Bicho et al., Simulating crowds based on a space colonization algorithm, 2012](https://doi.org/10.1016/j.cag.2011.12.004)
 
 # Backlog of Features
     - Parallellize the space distribution job.
