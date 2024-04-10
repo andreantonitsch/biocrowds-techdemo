@@ -10,7 +10,7 @@ Two implementation issues that occurs from that idea, and the original algorithm
 - the discretized world data can become huge;
 - the distribution of space among the agents needs special care when parallellizing the algorithm.
 
-The original BioCrowds[[1]](./README.md/#References) further partition space in a regular square grid, each cell containing some quantity of 'space markers'. These space markers are sample in the simulation initialization. This fixes the world size to a pre-defined region (where there are markers).
+The original BioCrowds[[1]](#references) further partition space in a regular square grid, each cell containing some quantity of 'space markers'. These space markers are sample in the simulation initialization. This fixes the world size to a pre-defined region (where there are markers).
 
 In this implementation, I changed the algorithm slightly to favor the data oriented simulation flow.
 Instead of pre-sampling a partition of space, I compute the samples on the fly, during the simulation.
