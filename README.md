@@ -72,7 +72,7 @@ crowdManager.Simulate(Time.deltaTime);
 
 Lane formation
 <p float="left">
-    <img src="Examples/lanes.gif" width="350">
+    <img src="Examples/lanes.gif" width="400">
     <img src="Images/Laneformation.png" width="350">
 </p>
 
