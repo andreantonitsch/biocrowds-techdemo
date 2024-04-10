@@ -78,7 +78,7 @@ Lane formation
 
 4-Way Crossing
 
-<img src="Examples/4way.gif" width="350">
+<img src="Examples/4way.gif" width="400">
 
 ### Sample Examples
 The package comes with an example scenes and components that implements some examples:
