@@ -21,8 +21,7 @@ The current implementation does not parallellize the marker sampling and distrib
 
 All that said, this package heavily uses Unity Native Collections, Parallell Jobs and Burst Mathematics to increase performance of the simulation.
 
-    // Gifs
-    // Images
+<img src="Examples/lanes.gif" width="550">
 
 # Requirements and Installation
 This package was tested in _Unity3D 2022.3.1f1(LTS)_ and requires:
@@ -72,9 +71,10 @@ crowdManager.Simulate(Time.deltaTime);
 ### Simulation Features
 
 Lane formation
-
-<img src="Examples/lanes.gif" width="350">
-<img src="Images/Laneformation.png" width="350">
+<p float="left">
+    <img src="Examples/lanes.gif" width="350">
+    <img src="Images/Laneformation.png" width="350">
+</p>
 
 4-Way Crossing
 
